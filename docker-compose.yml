@@ -1,6 +1,6 @@
 services:
   mysql:
-    image: mysql:8.0
+    image: mysql:9.7
     environment:
       MYSQL_ROOT_PASSWORD: rootpass
       MYSQL_DATABASE: exchange_rates
@@ -46,6 +46,7 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://host.docker.internal:4317
       OTEL_EXPORTER_OTLP_PROTOCOL: grpc
     extra_hosts:
+      # thanks to this we can run LGTM stack locally and reach it from the container
       - "host.docker.internal:host-gateway"
     command: ["serve"]
     ports:
