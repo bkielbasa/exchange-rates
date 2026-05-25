@@ -1,0 +1,20 @@
+# Don't ship local dev artefacts into the build context
+.git
+.env
+.env.local
+.idea
+.vscode
+*.test
+*.out
+coverage.*
+.coverage/
+
+# Don't ship docs / plans into the runtime image
+docs/
+
+# Don't ship the e2e tree (it's tag-gated anyway)
+e2e/
+
+# Built binaries
+/cli
+/server

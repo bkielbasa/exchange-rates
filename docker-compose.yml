@@ -1,0 +1,73 @@
+services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: exchange_rates
+      MYSQL_USER: user
+      MYSQL_PASSWORD: pass
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-prootpass"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+
+  migrate:
+    image: migrate/migrate
+    depends_on:
+      mysql:
+        condition: service_healthy
+    volumes:
+      - ./migrations:/migrations:ro
+    command:
+      [
+        "-path=/migrations/",
+        "-database",
+        "mysql://user:pass@tcp(mysql:3306)/exchange_rates",
+        "up",
+      ]
+
+  serve:
+    build: .
+    depends_on:
+      mysql:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      MYSQL_DSN: "user:pass@tcp(mysql:3306)/exchange_rates?parseTime=true"
+      HTTP_ADDR: ":8080"
+      LOG_LEVEL: info
+      OTEL_SERVICE_NAME: exchange-rates
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://host.docker.internal:4317
+      OTEL_EXPORTER_OTLP_PROTOCOL: grpc
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: ["serve"]
+    ports:
+      - "8080:8080"
+
+  fetch:
+    build: .
+    depends_on:
+      mysql:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      MYSQL_DSN: "user:pass@tcp(mysql:3306)/exchange_rates?parseTime=true"
+      LOG_LEVEL: info
+      FETCH_SOURCE_URL: "https://www.bank.lv/vk/ecb_rss.xml"
+      OTEL_SERVICE_NAME: exchange-rates
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://host.docker.internal:4317
+      OTEL_EXPORTER_OTLP_PROTOCOL: grpc
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: ["fetch"]
+
+volumes:
+  mysql-data:
